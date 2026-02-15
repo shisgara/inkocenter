@@ -131,9 +131,49 @@
 
 <body>
 	<div id="root"></div>
+	<audio id="scroll-audio" src="333.mp3" preload="auto"></audio>
 	<div id="error-message">Загрузка... Если страница не открылась, пожалуйста, обновите её.</div>
 
 	<script type="text/babel">
+		/** Оверлей-кнопка, появляется только если autoplay заблокирован */
+		const SoundUnlockButton = ({ visible, onUnlock }) => {
+			if (!visible) return null;
+
+			return (
+				<div className="
+      fixed bottom-4 left-1/2 -translate-x-1/2 z-[999]
+      px-4 w-full max-w-sm pointer-events-auto
+    ">
+					<div className="
+        flex items-center justify-between gap-4
+        rounded-2xl border border-white/10
+        bg-[#0f172a]/90 backdrop-blur-md
+        shadow-[0_10px_40px_rgba(0,0,0,0.45)]
+        px-4 py-3
+      ">
+						{/* текст */}
+						<div className="text-sm text-white/90 leading-tight">
+							Нажмите, чтобы включить звук
+						</div>
+
+						{/* кнопка */}
+						<button
+							onClick={onUnlock}
+							className="
+            shrink-0 rounded-xl px-4 py-2
+            font-semibold text-white text-sm
+            bg-gradient-to-br from-blue-400 to-blue-600
+            shadow-[0_6px_18px_rgba(96,165,250,0.45)]
+            active:scale-95 transition-all
+          "
+						>
+							🔊 Включить
+						</button>
+					</div>
+				</div>
+			);
+		};
+
 		// Safe check for dependencies
 		const Motion = window.Motion;
 		if (!Motion) {
@@ -141,6 +181,8 @@
 			document.getElementById('error-message').innerText = "Ошибка: Библиотека анимации не загрузилась.";
 			throw new Error("Framer Motion missing");
 		}
+
+		const isMobile = window.innerWidth < 640;
 
 		const { motion, useInView } = Motion;
 		const { useState, useEffect } = React;
@@ -550,11 +592,6 @@
 		const PulseSection = () => (
 			<section className="py-16 md:py-24 bg-[#0f1421] relative overflow-hidden">
 				<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-					<motion.div animate={{ scale: [1.1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 3 }}>
-						<Icon name="heart" className="w-[520px] h-[520px] text-[rgba(96,165,250,0.18)] drop-shadow-[0_0_80px_rgba(96,165,250,0.25)]"
-						/>
-
-					</motion.div>
 				</div>
 
 
@@ -805,20 +842,86 @@
 		);
 
 		// APP
-		const App = () => (
-			<main className="w-full overflow-hidden">
-				<Hero />
-				<TenureSection />
-				<PulseSection />
-				<DetailedSystemClicks />
-				<SystemClicksChart />
-				<InkoSection />
-				<GreetingSection />
-				<footer className="py-6 sm:py-8 text-center text-[#475569] text-[11px] sm:text-xs bg-[#0f1421]">
-					17.02.2026 • ИНКОЦентр
-				</footer>
-			</main>
-		);
+		/* 3) ЗАМЕНИ свой const App = () => (...) на ЭТОТ App (полностью) */
+
+		const App = () => {
+			const [needUnlock, setNeedUnlock] = React.useState(false);
+
+			React.useEffect(() => {
+				const audio = document.getElementById("scroll-audio");
+				if (!audio) return;
+
+				let played = false;   // чтобы проиграть строго 1 раз
+				let triedOnce = false;
+
+				const removeListeners = () => {
+					window.removeEventListener("scroll", onGesture);
+					window.removeEventListener("touchstart", onGesture);
+					window.removeEventListener("pointerdown", onGesture);
+				};
+
+				const tryPlay = async () => {
+					if (played) return;
+
+					try {
+						audio.currentTime = 0;
+						await audio.play();
+						played = true;
+
+						setNeedUnlock(false);
+						removeListeners();
+					} catch (e) {
+						// iOS/Safari мог заблокировать — если это уже была попытка от жеста, покажем кнопку
+						if (triedOnce) setNeedUnlock(true);
+					}
+				};
+
+				const onGesture = () => {
+					triedOnce = true;
+					// важно: запускаем в следующем тике, чтобы браузер точно считал это "user gesture"
+					setTimeout(tryPlay, 0);
+				};
+
+				// пытаемся стартовать на первом скролле/тапе
+				window.addEventListener("scroll", onGesture, { passive: true });
+				window.addEventListener("touchstart", onGesture, { passive: true });
+				window.addEventListener("pointerdown", onGesture, { passive: true });
+
+				return removeListeners;
+			}, []);
+
+			const manualUnlock = async () => {
+				const audio = document.getElementById("scroll-audio");
+				if (!audio) return;
+
+				try {
+					audio.currentTime = 0;
+					await audio.play();       // после клика iOS почти всегда разрешает
+					setNeedUnlock(false);
+				} catch (e) {
+					// если всё равно заблокировано — ничего не делаем
+				}
+			};
+
+			return (
+				<>
+					<SoundUnlockButton visible={needUnlock} onUnlock={manualUnlock} />
+
+					<main className="w-full overflow-hidden">
+						<Hero />
+						<TenureSection />
+						<PulseSection />
+						<DetailedSystemClicks />
+						<SystemClicksChart />
+						<InkoSection />
+						<GreetingSection />
+						<footer className="py-6 sm:py-8 text-center text-[#475569] text-[11px] sm:text-xs bg-[#0f1421]">
+							17.02.2026 • ИНКОЦентр
+						</footer>
+					</main>
+				</>
+			);
+		};
 
 		ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 	</script>
