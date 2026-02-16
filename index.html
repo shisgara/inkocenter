@@ -936,57 +936,97 @@
 				};
 
 				const attachScrollFade = () => {
-					// На каком участке до конца страницы затухаем (px).
-					// Увеличь, если хочешь, чтобы затухание начиналось раньше.
 					const fadeRangePx = 1000;
 
 					const getFadeStartPx = () => {
 						const doc = document.documentElement;
-						const maxScrollY = (doc.scrollHeight - doc.clientHeight);
+						const maxScrollY = Math.max(0, doc.scrollHeight - doc.clientHeight);
 						return Math.max(0, maxScrollY - fadeRangePx);
 					};
 
 					let fadeStartPx = getFadeStartPx();
 
-					const onResizeOrLoad = () => {
-						fadeStartPx = getFadeStartPx();
-						onScrollFade(); // применить сразу
+					// --- smoothing state ---
+					let raf = 0;
+					let currentVol = 1;          // текущее сглаженное значение
+					let bottomSince = null;      // для “мягкой” паузы
+					const lerp = (a, b, t) => a + (b - a) * t;
+
+					const computeTarget = () => {
+						const doc = document.documentElement;
+						const maxScrollY = Math.max(0, doc.scrollHeight - doc.clientHeight);
+
+						// КРИТИЧНО: iOS bounce -> clamp scrollY, иначе t прыгает в 1
+						const yRaw = window.scrollY || 0;
+						const y = Math.min(maxScrollY, Math.max(0, yRaw));
+
+						const denom = Math.max(1, maxScrollY - fadeStartPx);
+						const t = clamp01((y - fadeStartPx) / denom);
+
+						// 1 -> 0, с лёгким easing
+						const v = (1 - t);
+						const targetVol = v * v;
+
+						const atBottom = (maxScrollY - y) < 2; // ~2px допуск
+						return { targetVol, atBottom };
 					};
 
+					const tick = () => {
+						raf = 0;
+
+						const { targetVol, atBottom } = computeTarget();
+
+						// СГЛАЖИВАНИЕ: убирает “ступеньку” на iOS
+						currentVol = lerp(currentVol, targetVol, 0.14); // 0.10–0.20 можно
+
+						audio.volume = clamp01(currentVol);
+
+						// Пауза только если реально держимся на самом низу чуть-чуть,
+						// иначе на iOS будет резкий “обрыв” на bounce-кадре.
+						const now = performance.now();
+
+						if (atBottom && targetVol < 0.002) {
+							if (bottomSince === null) bottomSince = now;
+							if ((now - bottomSince) > 220 && !audio.paused) {
+								audio.pause();
+								audio.volume = 0;
+							}
+						} else {
+							bottomSince = null;
+							// если пользователь ушёл вверх — можно возобновить (без щелчка)
+							if (audio.paused && targetVol > 0.02) {
+								audio.play().catch(() => { /* игнор */ });
+							}
+						}
+					};
+
+					const onScrollFade = () => {
+						if (raf) return;
+						raf = requestAnimationFrame(tick);
+					};
+
+					const onResizeOrLoad = () => {
+						fadeStartPx = getFadeStartPx();
+						onScrollFade();
+					};
+
+					window.addEventListener("scroll", onScrollFade, { passive: true });
 					window.addEventListener("resize", onResizeOrLoad);
 
-					// На случай, если после загрузки шрифтов/картинок высота страницы меняется
+					// на случай пересчёта высоты после шрифтов
 					setTimeout(onResizeOrLoad, 250);
 					setTimeout(onResizeOrLoad, 900);
 					setTimeout(onResizeOrLoad, 1600);
 
-					const onScrollFade = () => {
-						const y = window.scrollY || 0;
-						const doc = document.documentElement;
-						const maxScrollY = (doc.scrollHeight - doc.clientHeight);
-
-						// прогресс затухания: 0 -> 1 (на последнем участке страницы)
-						const t = clamp01((y - fadeStartPx) / Math.max(1, (maxScrollY - fadeStartPx)));
-
-						// громкость: 1 -> 0 с мягким easing
-						const v = (1 - t);
-						audio.volume = v * v; // ease-out
-
-						if (audio.volume <= 0.01 && !audio.paused) {
-							audio.pause();
-						}
-					};
-
-					window.addEventListener("scroll", onScrollFade, { passive: true });
-
-					// применить сразу
 					onScrollFade();
 
 					cleanupScrollFade = () => {
 						window.removeEventListener("scroll", onScrollFade);
 						window.removeEventListener("resize", onResizeOrLoad);
+						if (raf) cancelAnimationFrame(raf);
 					};
 				};
+
 
 
 				const tryPlay = async () => {
