@@ -131,6 +131,7 @@
 			--text-strong: #e6edf7;
 			--text-main: #cfd8e6;
 			--text-soft: #9fb0c6;
+			--bg-soft: #0f1a33;
 		}
 	</style>
 </head>
@@ -706,31 +707,29 @@
 
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 						{/* КАРТОЧКА С ПРОГРЕСС-БАРАМИ (бывшая "Документооборот") */}
-						<div className="bg-[color:var(--bg-panel)] p-7 sm:p-10 rounded-3xl border border-[#B38728]/35 relative overflow-hidden">
-							<div className="min-h-[420px] sm:min-h-[460px] flex flex-col">
-								{/* Бары равномерно по высоте */}
-								<div className="flex-1 flex flex-col justify-between gap-10 sm:gap-12">
-									<ProgressBar
-										label="Проверено отчетов (с 2015 г.)"
-										value="8 512"
-										width="90%"
-										color="bg-[#0ea5e9]"
-									/>
-									<ProgressBar
-										label="Согласовано отпусков (с 2017 г.)"
-										value="2 467"
-										width="40%"
-										color="bg-[#10b981]"
-									/>
-									<ProgressBar
-										label="Согласовано неявок (с 2021 г.)"
-										value="717"
-										width="15%"
-										color="bg-[#f59e0b]"
-									/>
-								</div>
+						<div className="bg-[color:var(--bg-panel)] p-6 sm:p-10 rounded-3xl border border-[#B38728]/35 relative overflow-hidden">
+							<div className="flex flex-col gap-8 sm:gap-12">
+								<ProgressBar
+									label="Проверено отчетов (с 2015 г.)"
+									value="8 512"
+									width="90%"
+									color="bg-[#0ea5e9]"
+								/>
+								<ProgressBar
+									label="Согласовано отпусков (с 2017 г.)"
+									value="2 467"
+									width="40%"
+									color="bg-[#10b981]"
+								/>
+								<ProgressBar
+									label="Согласовано неявок (с 2021 г.)"
+									value="717"
+									width="15%"
+									color="bg-[#f59e0b]"
+								/>
 							</div>
 						</div>
+
 
 						{/* ВТОРАЯ КОЛОНКА (как у тебя) */}
 						<div className="flex flex-col gap-6 justify-center">
@@ -818,10 +817,10 @@
 						<AttributeCard title="Мудрый советчик" desc="Источник глубокого анализа и&nbsp;оптимальных решений" delay={0.3}
 							icon={<Icon name="brain-circuit" className="w-8 h-8 text-purple-400" />} borderColor="border-purple-400/20" hoverColor="hover:border-purple-400" />
 
-						<AttributeCard id="fadeTarget" title="Энергичный лидер" desc="Вихрь азарта и&nbsp;мотивации на&nbsp;свершения" delay={0.4}
+						<AttributeCard title="Энергичный лидер" desc="Вихрь азарта и&nbsp;мотивации на&nbsp;свершения" delay={0.4}
 							icon={<Icon name="zap" className="w-8 h-8 text-yellow-400" />} borderColor="border-yellow-400/20" hoverColor="hover:border-yellow-400" />
 
-						<AttributeCard title="Яркая, красивая, очаровательная, добрая и&nbsp;веселая женщина" desc="Мастер создать вокруг атмосферу энергии, жизни и&nbsp;позитива!" delay={0.5}
+						<AttributeCard id="fadeTarget" title="Яркая, красивая, очаровательная, добрая и&nbsp;веселая женщина" desc="Мастер создать вокруг атмосферу энергии, жизни и&nbsp;позитива!" delay={0.5}
 							icon={<Icon name="smile" className="w-8 h-8 text-pink-300" />} borderColor="border-pink-400/20" hoverColor="hover:border-pink-400" />
 
 						<motion.div
@@ -869,6 +868,9 @@
 					};
 
 					let fadeStartPx = getFadeStartPx();
+					setTimeout(() => { fadeStartPx = getFadeStartPx(); }, 250);
+					setTimeout(() => { fadeStartPx = getFadeStartPx(); }, 900);
+
 
 					const onResize = () => {
 						fadeStartPx = getFadeStartPx();
@@ -879,8 +881,8 @@
 						const v = volumeByScrollFrom(window.scrollY, fadeStartPx, 900);
 						audio.volume = v;
 
+						// если почти 0 — просто оставим как есть (можно паузить, но без автоплей обратно)
 						if (v <= 0.01 && !audio.paused) audio.pause();
-						if (v > 0.02 && audio.paused) audio.play().catch(() => { });
 					};
 
 					// применим сразу
