@@ -857,44 +857,58 @@
 				};
 
 				const attachScrollFade = () => {
+					// На каком участке до конца страницы затухаем (px).
+					// Увеличь, если хочешь, чтобы затухание начиналось раньше.
+					const fadeRangePx = 1600;
+
 					const getFadeStartPx = () => {
-						const el = document.getElementById("fadeTarget");
-						if (!el) return 999999;
-
-						const top = el.getBoundingClientRect().top + window.scrollY;
-
-						// Старт затухания чуть ДО карточки (чтобы “на подходе” уже уходило)
-						return top - window.innerHeight * 0.70;
+						const doc = document.documentElement;
+						const maxScrollY = (doc.scrollHeight - doc.clientHeight);
+						return Math.max(0, maxScrollY - fadeRangePx);
 					};
 
 					let fadeStartPx = getFadeStartPx();
-					setTimeout(() => { fadeStartPx = getFadeStartPx(); }, 250);
-					setTimeout(() => { fadeStartPx = getFadeStartPx(); }, 900);
 
-
-					const onResize = () => {
+					const onResizeOrLoad = () => {
 						fadeStartPx = getFadeStartPx();
+						onScrollFade(); // применить сразу
 					};
-					window.addEventListener("resize", onResize);
+
+					window.addEventListener("resize", onResizeOrLoad);
+
+					// На случай, если после загрузки шрифтов/картинок высота страницы меняется
+					setTimeout(onResizeOrLoad, 250);
+					setTimeout(onResizeOrLoad, 900);
+					setTimeout(onResizeOrLoad, 1600);
 
 					const onScrollFade = () => {
-						const v = volumeByScrollFrom(window.scrollY, fadeStartPx, 900);
-						audio.volume = v;
+						const y = window.scrollY || 0;
+						const doc = document.documentElement;
+						const maxScrollY = (doc.scrollHeight - doc.clientHeight);
 
-						// если почти 0 — просто оставим как есть (можно паузить, но без автоплей обратно)
-						if (v <= 0.01 && !audio.paused) audio.pause();
+						// прогресс затухания: 0 -> 1 (на последнем участке страницы)
+						const t = clamp01((y - fadeStartPx) / Math.max(1, (maxScrollY - fadeStartPx)));
+
+						// громкость: 1 -> 0 с мягким easing
+						const v = (1 - t);
+						audio.volume = v * v; // ease-out
+
+						if (audio.volume <= 0.01 && !audio.paused) {
+							audio.pause();
+						}
 					};
-
-					// применим сразу
-					onScrollFade();
 
 					window.addEventListener("scroll", onScrollFade, { passive: true });
 
+					// применить сразу
+					onScrollFade();
+
 					cleanupScrollFade = () => {
 						window.removeEventListener("scroll", onScrollFade);
-						window.removeEventListener("resize", onResize);
+						window.removeEventListener("resize", onResizeOrLoad);
 					};
 				};
+
 
 				const tryPlay = async () => {
 					if (played) return;
