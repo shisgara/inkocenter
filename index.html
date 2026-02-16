@@ -581,7 +581,7 @@
 						<PulseCard
 							icon={<Icon name="message-circle" className="w-6 h-6 text-emerald-300" />}
 							value="2 463"
-							label="Комментариев"
+							label="Комментария"
 						/>
 
 						<PulseCard
@@ -891,18 +891,26 @@
 							initial={{ scale: 0 }}
 							whileInView={{ scale: 1 }}
 							transition={{ delay: 0.6, type: "spring" }}
-							className="bg-gold-metallic rounded-xl border border-white/20 shadow-[0_0_30px_rgba(179,135,40,0.4)]
-    						flex flex-col items-center justify-center text-center p-6 min-h-[168px] sm:min-h-[176px]"
+							className="bg-gold-metallic p-6 rounded-xl flex flex-col items-center justify-center gap-3
+             shadow-[0_0_30px_rgba(179,135,40,0.4)] border border-white/20"
 						>
-							<div className="mb-4 p-4 rounded-full bg-black/10 border border-white/20">
-								<Icon name="heart" className="w-8 h-8 text-[#131b2e]" />
-							</div>
 
-							<h4 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-[#131b2e] font-serif tracking-wide uppercase leading-tight">
-								С&nbsp;Днем<br className="sm:hidden" /> Рождения!
+							{/* розовое сердечко */}
+							<motion.div
+								animate={{ scale: [1, 1.18, 1] }}
+								transition={{ repeat: Infinity, duration: 1.2 }}
+							>
+								<Icon
+									name="heart"
+									className="w-9 h-9 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.75)]"
+								/>
+							</motion.div>
+
+							<h4 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#131b2e] font-serif tracking-wide uppercase">
+								С&nbsp;Днем Рождения!
 							</h4>
-
 						</motion.div>
+
 
 					</div>
 				</div>
