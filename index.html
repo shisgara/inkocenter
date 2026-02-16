@@ -674,7 +674,7 @@
 		const SystemClicksChart = () => null;
 
 		// 6) INKO-ZP
-		const ProgressBar = ({ label, value, width, color }) => (
+		const ProgressBar = ({ label, value, width, color, start = false, onDone }) => (
 			<div className="w-full">
 				<div className="flex justify-between items-baseline mb-3">
 					<span className="text-[#cbd5e1] text-base sm:text-lg md:text-xl font-medium">
@@ -688,9 +688,9 @@
 				<div className="h-5 sm:h-6 bg-[color:var(--bg-panel)] rounded-full overflow-hidden border border-white/10">
 					<motion.div
 						initial={{ width: 0 }}
-						whileInView={{ width: width }}
-						viewport={{ once: true }}
+						animate={{ width: start ? width : 0 }}
 						transition={{ duration: 1.5, ease: "easeOut" }}
+						onAnimationComplete={() => onDone && start && onDone()}
 						className={`h-full ${color}`}
 					/>
 				</div>
@@ -706,29 +706,74 @@
 					</h2>
 
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						{/* КАРТОЧКА С ПРОГРЕСС-БАРАМИ (бывшая "Документооборот") */}
-						<div className="bg-[color:var(--bg-panel)] p-6 sm:p-10 rounded-3xl border border-[#B38728]/35 relative overflow-hidden">
-							<div className="flex flex-col gap-8 sm:gap-12">
-								<ProgressBar
-									label="Проверено отчетов"
-									value="8 512"
-									width="90%"
-									color="bg-[#0ea5e9]"
-								/>
-								<ProgressBar
-									label="Согласовано отпусков"
-									value="2 467"
-									width="40%"
-									color="bg-[#10b981]"
-								/>
-								<ProgressBar
-									label="Согласовано неявок"
-									value="717"
-									width="15%"
-									color="bg-[#f59e0b]"
-								/>
-							</div>
-						</div>
+						{/* КАРТОЧКА С ПРОГРЕСС-БАРАМИ */}
+						{(() => {
+							const cardRef = React.useRef(null);
+							const inView = useInView(cardRef, { once: true, amount: 0.35 });
+							const [showNote, setShowNote] = React.useState(false);
+
+							return (
+								<div
+									ref={cardRef}
+									className="bg-[color:var(--bg-panel)] p-7 sm:p-10 rounded-3xl border border-[#B38728]/35 relative overflow-hidden"
+								>
+									<div className="min-h-[420px] sm:min-h-[460px] flex flex-col">
+										{/* БАРЫ */}
+										<div className="flex-1 flex flex-col justify-between gap-12 sm:gap-14">
+											<ProgressBar
+												label="Проверено отчетов (с 2015 г.)"
+												value="8 512"
+												width="90%"
+												color="bg-[#0ea5e9]"
+												start={inView}
+											/>
+											<ProgressBar
+												label="Согласовано отпусков (с 2017 г.)"
+												value="2 467"
+												width="40%"
+												color="bg-[#10b981]"
+												start={inView}
+											/>
+											<ProgressBar
+												label="Согласовано неявок (с 2021 г.)"
+												value="717"
+												width="15%"
+												color="bg-[#f59e0b]"
+												start={inView}
+												onDone={() => setShowNote(true)}   // ← показываем подпись после 3-го бара
+											/>
+										</div>
+
+										{/* ТЕКСТ-КОМПЕНСАТОР (появляется ПОСЛЕ баров) */}
+										<motion.div
+											initial={{ opacity: 0, y: 10 }}
+											animate={showNote ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+											transition={{ duration: 0.55, ease: "easeOut" }}
+											className="mt-10 pt-8 relative"
+										>
+											{/* мягкий подсвет снизу */}
+											<div className="pointer-events-none absolute inset-x-0 -bottom-6 h-24 bg-gradient-to-t from-[#B38728]/10 via-[#B38728]/5 to-transparent blur-xl" />
+
+											{/* градиентное “проявление” сверху */}
+											<div
+												className="relative"
+												style={{
+													WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 28%, black 100%)",
+													maskImage: "linear-gradient(to bottom, transparent 0%, black 28%, black 100%)"
+												}}
+											>
+												<p className="text-lg sm:text-xl text-[color:var(--text-main)] font-medium mb-5 sm:mb-6">
+													+ Километры таблиц, десятки тысяч звонков, писем и&nbsp;сообщений,
+													сотни совещаний, миллионы нервных клеток — всего уже не&nbsp;сосчитать.
+												</p>
+											</div>
+										</motion.div>
+									</div>
+								</div>
+							);
+						})()}
+
+
 
 
 						{/* ВТОРАЯ КОЛОНКА (как у тебя) */}
@@ -755,17 +800,6 @@
 						</div>
 					</div>
 
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true }}
-						className="mt-12 sm:mt-16 md:mt-20 p-6 sm:p-8 text-center border-t border-b border-[#B38728]/35 bg-gradient-to-r from-transparent via-[#1a233b] to-transparent"
-					>
-						<p className="text-base sm:text-lg md:text-xl text-[#cbd5e1] italic font-serif leading-loose">
-							+ Километры таблиц, десятки тысяч звонков, писем и&nbsp;сообщений, <br className="hidden sm:block" />
-							сотни совещаний, миллионы нервных клеток — всего уже не&nbsp;сосчитать.
-						</p>
-					</motion.div>
 				</div>
 			</section>
 		);
@@ -796,7 +830,7 @@
 
 				<div className="max-w-6xl mx-auto relative z-10">
 					<h2 className="text-2xl sm:text-3xl md:text-4xl font-serif italic mb-8 sm:mb-12 text-[color:var(--text-main)] leading-snug">
-						Удивительная, единственная и&nbsp;неповторимая наша,<br />
+						Наша удивительная, единственная и&nbsp;неповторимая<br />
 						<span className="text-gold-metallic font-bold text-3xl sm:text-4xl md:text-5xl mt-2 block leading-[1.5] pb-[0.1em]">
 							Светлана Фёдоровна!
 						</span>
@@ -827,12 +861,19 @@
 							initial={{ scale: 0 }}
 							whileInView={{ scale: 1 }}
 							transition={{ delay: 0.6, type: "spring" }}
-							className="bg-gold-metallic p-6 rounded-xl flex items-center justify-center shadow-[0_0_30px_rgba(179,135,40,0.4)] border border-white/20"
+							className="bg-gold-metallic rounded-xl border border-white/20 shadow-[0_0_30px_rgba(179,135,40,0.4)]
+    						flex flex-col items-center justify-center text-center p-6 min-h-[168px] sm:min-h-[176px]"
 						>
-							<h4 className="text-xl sm:text-2xl font-bold text-[#131b2e] font-serif tracking-wide uppercase">
-								С&nbsp;Днем Рождения!
+							<div className="mb-4 p-4 rounded-full bg-black/10 border border-white/20">
+								<Icon name="heart" className="w-8 h-8 text-[#131b2e]" />
+							</div>
+
+							<h4 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-[#131b2e] font-serif tracking-wide uppercase leading-tight">
+								С&nbsp;Днем<br className="sm:hidden" /> Рождения!
 							</h4>
+
 						</motion.div>
+
 					</div>
 				</div>
 			</section>
